@@ -1,8 +1,9 @@
 module Main where
 import Data.Char
+import Control.Applicative
 
 data Node = Function [Char] Node
-  | Application [Node] [Node]
+  | Application Node [Node] -- apply [Node]s to Node
   | Identifier Char
   deriving (Show,Eq)
 
@@ -23,15 +24,53 @@ instance Applicative Parser where
       (input'', a) <- p2 input'
       Just (input'', f a)
 
+instance Alternative Parser where
+  empty = Parser $ \_ -> Nothing
+  (Parser p1) <|> (Parser p2) = Parser $ \input -> 
+    p1 input <|> p2 input
+
+
+ws :: Parser String
+ws = spanP isSpace
+
+parseExpr :: Parser Node
+parseExpr = function <|> application <|> identifier
+
+application :: Parser Node
+application = f <$> 
+    (charP '(' *> ws *> many parseExpr <* ws <* charP ')')
+  where
+    f [x] = x
+    f (x:xs) = Application x xs
+
+
 
 function :: Parser Node
-function = undefined
+function = Function <$> (charP 'λ' *> identifiers <* charP '.') <*> parseExpr
+    
 
+identifiers :: Parser String
+identifiers = spanP (/='.')
+
+
+
+notNull :: Parser [a] -> Parser [a]
+notNull (Parser p) = Parser $ \input -> do
+  (input', xs) <- p input
+  if null xs 
+    then Nothing
+    else Just (input', xs)
+
+spanP :: (Char -> Bool) -> Parser String
+spanP f = Parser $ \input ->
+  let (token, rest) = span f input
+  in Just (rest, token)
 
 identifier :: Parser Node
 --identifier = (\x ->  Identifier $ head x) <$> stringP "\0"
-identifier = Parser $ f 
+identifier = Parser f 
   where
+    f [')'] = Nothing
     f (y:ys) = Just (ys, Identifier y)
     f [] = Nothing
 
