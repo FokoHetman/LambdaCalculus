@@ -70,7 +70,9 @@ identifier :: Parser Node
 --identifier = (\x ->  Identifier $ head x) <$> stringP "\0"
 identifier = Parser f 
   where
-    f [')'] = Nothing
+    f (')':ys) = Nothing
+    f ('(':ys) = Nothing
+    f (' ':ys) = runParser parseExpr ys
     f (y:ys) = Just (ys, Identifier y)
     f [] = Nothing
 
