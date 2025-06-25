@@ -1,5 +1,8 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Main where
 import Data.Char
+import Data.List
 import Control.Applicative
 
 data Node = Function [Char] Node
@@ -90,6 +93,41 @@ charP x = Parser $ f
 stringP :: String -> Parser String
 stringP = sequenceA . map charP
 
+
+unwrap :: Maybe a -> a
+unwrap (Just a) = a
+
+
+display :: Node -> String
+display (Function args body) = "λ" ++ args ++ ".(" ++ display body ++ ")"
+display (Application a bs) = "(" ++ display a ++ " " ++ (intercalate " " $ fmap display bs) ++ ")"
+display (Identifier id) = [id]
+
+displayIO :: Node -> IO()
+displayIO x = do putStrLn $ display x
+
+
+substitute :: Node -> Node -> Node -> Node
+substitute replaced with (Application a bs) = if Application a bs == replaced then with else
+      Application (substitute replaced with a) (fmap (substitute replaced with) bs)
+
+substitute replaced with (Function args body) = if Function args body == replaced then with else
+      Function args $ substitute replaced with body
+
+substitute replaced with x = if x==replaced then with else x
+
+
+
+betaReduce :: Node -> Node
+betaReduce (Application (Function args body) bs) = if length bs == 1 then
+      f
+    else
+      Application f $ tail bs
+    where
+      g = substitute (Identifier $ head args) (head bs) body
+      f = if length args > 1 then Function (tail args) g
+          else g
+betaReduce _ = error "fok you"
 
 
 
