@@ -50,7 +50,9 @@ application = f <$>
 
 function :: Parser Node
 function = Function <$> (charP 'λ' *> identifiers <* charP '.') <*> parseExpr
-    
+
+--definition :: Parser Node
+--definition = Definition <$> ()
 
 identifiers :: Parser String
 identifiers = spanP (/='.')
@@ -119,6 +121,7 @@ substitute replaced with x = if x==replaced then with else x
 
 
 betaReduce :: Node -> Node
+betaReduce (Function args body) = Function args (betaReduce body)
 betaReduce (Application (Function args body) bs) = if length bs == 1 then
       f
     else
