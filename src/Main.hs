@@ -130,9 +130,28 @@ betaReduce (Application (Function args body) bs) = if length bs == 1 then
       g = substitute (Identifier $ head args) (head bs) body
       f = if length args > 1 then Function (tail args) g
           else g
-betaReduce _ = error "fok you"
+betaReduce x = x
 
 
+reducible :: Node -> Bool
+reducible x = x /= betaReduce x
+
+
+solve :: Node -> Node
+solve x =
+  if reducible x then
+    solve $ betaReduce x
+  else
+    x
+
+
+replace :: Char -> Char -> String -> String
+replace a b (x:xs) = (if x==a then b else x):replace a b xs
+
+run :: String -> Node
+run x = solve $ (snd . unwrap) $ runParser parseExpr $ replace '\\' 'λ' x
 
 main :: IO ()
-main = putStrLn "<init>"
+main = do
+  x <- getLine
+  displayIO $ run x
